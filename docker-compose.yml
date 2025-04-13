@@ -1,0 +1,38 @@
+version: '3'
+services:
+  django-api:
+    build: ./techs/django-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./techs/django-api:/app
+    depends_on:
+      - db
+
+  fastapi-service:
+    build: ./techs/FastApi
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./techs/FastApi:/app
+
+  go-api:
+    build: ./techs/go-api
+    ports:
+      - "8002:8080"
+    volumes:
+      - ./techs/go-api:/app
+
+  db:
+    image: postgres:latest
+    environment:
+      - POSTGRES_DB=Projet
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+
+volumes:
+  postgres_data:

@@ -1,0 +1,7 @@
+# docs/api-specs/django-api-openapi.yaml
+openapi: 3.0.0
+info:
+  title: Django API
+  version: 1.0.0
+paths:
+  # Définir vos endpoints ici
