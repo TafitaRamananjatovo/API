@@ -2,7 +2,7 @@ FROM golang:1.20 AS builder
 WORKDIR /app
 
 # Première étape : créer un go.mod s'il n'existe pas
-RUN [ -f go.mod ] || go mod init github.com/yourusername/api-project/go-api
+RUN [ -f go.mod ] || go mod init github.com/TafitaRamananjatovo/API/techs/go-api
 
 # Copier le code source
 COPY . .
