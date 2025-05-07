@@ -20,7 +20,7 @@ var doc = `{
         },
         "version": "1.0"
     },
-    "host": "localhost:8080",
+    "host": "localhost:8002",
     "basePath": "/",
     "schemes": ["http"]
 }`
@@ -31,7 +31,7 @@ func init() {
 
 var s = swag.Spec{
     Version:          "1.0",
-    Host:             "localhost:8080",
+    Host:             "localhost:8002",
     BasePath:         "/",
     Schemes:          []string{"http"},
     Title:            "Example API",
