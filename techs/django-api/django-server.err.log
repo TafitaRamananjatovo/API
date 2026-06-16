@@ -1,0 +1,13 @@
+C:\Users\tafit\Documents\Projets\API\env\Lib\site-packages\requests\__init__.py:87: RequestsDependencyWarning: urllib3 (2.5.0) or chardet (4.0.0) doesn't match a supported version!
+  warnings.warn("urllib3 ({}) or chardet ({}) doesn't match a supported "
+C:\Users\tafit\Documents\Projets\API\techs\django-api\api\views.py: Error [LoginView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+C:\Users\tafit\Documents\Projets\API\techs\django-api\api\views.py: Error [LogoutView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+C:\Users\tafit\Documents\Projets\API\techs\django-api\api\views.py: Error [UserProfileView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+C:\Users\tafit\Documents\Projets\API\techs\django-api\api\views.py: Error [RegisterView]: unable to guess serializer. This is graceful fallback handling for APIViews. Consider using GenericAPIView as view base class, if view is under your control. Either way you may want to add a serializer_class (or method). Ignoring view for now.
+[16/Jun/2026 06:17:53] "GET /api/schema/ HTTP/1.1" 200 86485
+C:\Users\tafit\Documents\Projets\API\env\Lib\site-packages\requests\__init__.py:87: RequestsDependencyWarning: urllib3 (2.5.0) or chardet (4.0.0) doesn't match a supported version!
+  warnings.warn("urllib3 ({}) or chardet ({}) doesn't match a supported "
+[16/Jun/2026 06:18:29] "GET /api/schema/ HTTP/1.1" 200 89163
+[16/Jun/2026 06:18:59] "GET / HTTP/1.1" 404 179
+[16/Jun/2026 06:19:00] "GET /favicon.ico HTTP/1.1" 404 179
+[16/Jun/2026 06:19:05] "GET /api/schema/ HTTP/1.1" 200 89163

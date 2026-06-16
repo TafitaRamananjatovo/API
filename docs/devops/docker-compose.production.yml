@@ -1,0 +1,143 @@
+version: "3.9"
+
+services:
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - django-api
+      - fastapi-ai
+      - go-websocket
+
+  django-api:
+    build:
+      context: ../../techs/django-api
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: postgres://smart_inventory:smart_inventory@postgres:5432/smart_inventory
+      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://smart_inventory:smart_inventory@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+
+  celery-worker:
+    build:
+      context: ../../techs/django-api
+    command: celery -A config worker -l info
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: postgres://smart_inventory:smart_inventory@postgres:5432/smart_inventory
+      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://smart_inventory:smart_inventory@rabbitmq:5672/
+    depends_on:
+      - django-api
+
+  celery-beat:
+    build:
+      context: ../../techs/django-api
+    command: celery -A config beat -l info
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DATABASE_URL: postgres://smart_inventory:smart_inventory@postgres:5432/smart_inventory
+      REDIS_URL: redis://redis:6379/0
+      RABBITMQ_URL: amqp://smart_inventory:smart_inventory@rabbitmq:5672/
+    depends_on:
+      - django-api
+
+  fastapi-ai:
+    build:
+      context: ../../techs/FastApi
+    environment:
+      DATABASE_URL: postgres://smart_inventory:smart_inventory@postgres:5432/smart_inventory
+      REDIS_URL: redis://redis:6379/1
+      RABBITMQ_URL: amqp://smart_inventory:smart_inventory@rabbitmq:5672/
+      MODEL_REGISTRY_URL: s3://smart-inventory-models
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+
+  go-notifications:
+    build:
+      context: ../../techs/go-api
+    environment:
+      SERVICE_NAME: notifications
+      DATABASE_URL: postgres://smart_inventory:smart_inventory@postgres:5432/smart_inventory
+      REDIS_URL: redis://redis:6379/2
+      RABBITMQ_URL: amqp://smart_inventory:smart_inventory@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+
+  go-websocket:
+    build:
+      context: ../../techs/go-api
+    environment:
+      SERVICE_NAME: websocket-gateway
+      REDIS_URL: redis://redis:6379/3
+      RABBITMQ_URL: amqp://smart_inventory:smart_inventory@rabbitmq:5672/
+    depends_on:
+      - redis
+      - rabbitmq
+
+  go-reporting:
+    build:
+      context: ../../techs/go-api
+    environment:
+      SERVICE_NAME: reporting
+      DATABASE_URL: postgres://smart_inventory:smart_inventory@postgres:5432/smart_inventory
+      REDIS_URL: redis://redis:6379/4
+      RABBITMQ_URL: amqp://smart_inventory:smart_inventory@rabbitmq:5672/
+    depends_on:
+      - postgres
+      - redis
+      - rabbitmq
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: smart_inventory
+      POSTGRES_USER: smart_inventory
+      POSTGRES_PASSWORD: smart_inventory
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: smart_inventory
+      RABBITMQ_DEFAULT_PASS: smart_inventory
+    ports:
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+
+  grafana:
+    image: grafana/grafana:11.0.0
+    ports:
+      - "3000:3000"
+
+  loki:
+    image: grafana/loki:3.0.0
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.102.1
+
+volumes:
+  postgres_data:
+  redis_data:
+  rabbitmq_data:

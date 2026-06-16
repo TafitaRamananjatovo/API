@@ -1,0 +1,4 @@
+INFO:     127.0.0.1:62670 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50914 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50704 - "GET /swagger HTTP/1.1" 200 OK
+INFO:     127.0.0.1:50704 - "GET /openapi.json HTTP/1.1" 200 OK

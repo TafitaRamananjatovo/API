@@ -1,0 +1,724 @@
+openapi: 3.0.3
+info:
+  title: Smart Inventory Management API
+  version: 1.0.0
+  description: Multi-tenant SaaS API for restaurant inventory, purchasing, forecasting, waste, and profitability.
+servers:
+  - url: https://api.smart-inventory.example.com/api/v1
+    description: Production
+  - url: http://localhost:8000/api/v1
+    description: Local Django API
+security:
+  - bearerAuth: []
+tags:
+  - name: Auth
+  - name: Organizations
+  - name: Restaurants
+  - name: Suppliers
+  - name: Products
+  - name: Inventory
+  - name: Purchase Orders
+  - name: Forecasts
+  - name: Recommendations
+  - name: Analytics
+  - name: Audit Logs
+paths:
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Issue JWT access and refresh tokens.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: manager@example.com
+              password: correct-horse-battery-staple
+      responses:
+        '200':
+          description: Authenticated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+        '401':
+          $ref: '#/components/responses/Error'
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh an access token.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh]
+              properties:
+                refresh:
+                  type: string
+      responses:
+        '200':
+          description: New token pair.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenPair'
+  /organizations:
+    get:
+      tags: [Organizations]
+      summary: List organizations for the current tenant.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Organization page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrganizations'
+  /restaurants:
+    get:
+      tags: [Restaurants]
+      summary: List restaurants.
+      parameters:
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - name: organization_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Restaurant page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRestaurants'
+  /suppliers:
+    get:
+      tags: [Suppliers]
+      summary: List suppliers.
+      parameters:
+        - $ref: '#/components/parameters/RestaurantId'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Supplier page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedSuppliers'
+    post:
+      tags: [Suppliers]
+      summary: Create supplier.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierCreate'
+      responses:
+        '201':
+          description: Supplier created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Supplier'
+  /products:
+    get:
+      tags: [Products]
+      summary: List products.
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: ordering
+          in: query
+          schema:
+            type: string
+          example: name,-created_at
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Product page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProducts'
+  /inventory/items:
+    get:
+      tags: [Inventory]
+      summary: List inventory items.
+      parameters:
+        - $ref: '#/components/parameters/RestaurantId'
+        - name: low_stock
+          in: query
+          schema:
+            type: boolean
+        - name: expires_before
+          in: query
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Inventory page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedInventoryItems'
+  /inventory/stock-movements:
+    post:
+      tags: [Inventory]
+      summary: Record a stock movement.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockMovementCreate'
+            example:
+              restaurant_id: ea86d1ae-e9cf-4770-8a15-86bb553a7b1c
+              inventory_item_id: f5c8f4bb-58c7-4597-9f95-3ff6daf37239
+              product_id: 341cf0b5-c574-457d-8b2f-dcf50b7cf522
+              movement_type: waste
+              quantity: -2.5
+              reason: Expired produce
+      responses:
+        '201':
+          description: Stock movement recorded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockMovement'
+        '400':
+          $ref: '#/components/responses/Error'
+  /purchase-orders:
+    get:
+      tags: [Purchase Orders]
+      summary: List purchase orders.
+      parameters:
+        - $ref: '#/components/parameters/RestaurantId'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, pending_approval, approved, ordered, received, cancelled]
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Purchase order page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPurchaseOrders'
+    post:
+      tags: [Purchase Orders]
+      summary: Create purchase order.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseOrderCreate'
+      responses:
+        '201':
+          description: Purchase order created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+  /purchase-orders/{id}/approve:
+    post:
+      tags: [Purchase Orders]
+      summary: Approve purchase order.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Purchase order approved.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseOrder'
+  /forecasts/daily:
+    get:
+      tags: [Forecasts]
+      summary: Get daily demand forecasts.
+      parameters:
+        - $ref: '#/components/parameters/RestaurantId'
+        - name: product_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Forecast list.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Forecast'
+  /recommendations/replenishment:
+    get:
+      tags: [Recommendations]
+      summary: Get replenishment recommendations.
+      parameters:
+        - $ref: '#/components/parameters/RestaurantId'
+      responses:
+        '200':
+          description: Recommendations.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReplenishmentRecommendation'
+  /analytics/profitability:
+    get:
+      tags: [Analytics]
+      summary: Get profitability analytics.
+      parameters:
+        - $ref: '#/components/parameters/RestaurantId'
+        - name: from_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Profitability summary.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfitabilityReport'
+  /audit-logs:
+    get:
+      tags: [Audit Logs]
+      summary: List audit logs.
+      parameters:
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+        - name: entity_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Audit log page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuditLogs'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    RestaurantId:
+      name: restaurant_id
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 50
+    Offset:
+      name: offset
+      in: query
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+  responses:
+    Error:
+      description: Error response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    TokenPair:
+      type: object
+      required: [access, refresh]
+      properties:
+        access:
+          type: string
+        refresh:
+          type: string
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+    Restaurant:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        organization_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        timezone:
+          type: string
+        currency:
+          type: string
+    Supplier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        lead_time_days:
+          type: integer
+    SupplierCreate:
+      type: object
+      required: [name]
+      properties:
+        restaurant_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        lead_time_days:
+          type: integer
+          minimum: 0
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        name:
+          type: string
+        unit:
+          type: string
+        average_unit_cost:
+          type: number
+          format: decimal
+    InventoryItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        restaurant_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        quantity_on_hand:
+          type: number
+        reorder_point:
+          type: number
+        expires_at:
+          type: string
+          format: date
+    StockMovementCreate:
+      type: object
+      required: [restaurant_id, inventory_item_id, product_id, movement_type, quantity]
+      properties:
+        restaurant_id:
+          type: string
+          format: uuid
+        inventory_item_id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        movement_type:
+          type: string
+          enum: [initial, purchase, sale, adjustment, waste, transfer, return]
+        quantity:
+          type: number
+        unit_cost:
+          type: number
+        reason:
+          type: string
+    StockMovement:
+      allOf:
+        - $ref: '#/components/schemas/StockMovementCreate'
+        - type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            occurred_at:
+              type: string
+              format: date-time
+    PurchaseOrderCreate:
+      type: object
+      required: [restaurant_id, supplier_id, items]
+      properties:
+        restaurant_id:
+          type: string
+          format: uuid
+        supplier_id:
+          type: string
+          format: uuid
+        expected_delivery_date:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            type: object
+            required: [product_id, quantity, unit, unit_cost]
+            properties:
+              product_id:
+                type: string
+                format: uuid
+              quantity:
+                type: number
+              unit:
+                type: string
+              unit_cost:
+                type: number
+    PurchaseOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        order_number:
+          type: string
+        status:
+          type: string
+        total:
+          type: number
+    Forecast:
+      type: object
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        forecast_date:
+          type: string
+          format: date
+        horizon_days:
+          type: integer
+        predicted_quantity:
+          type: number
+        confidence_low:
+          type: number
+        confidence_high:
+          type: number
+    ReplenishmentRecommendation:
+      type: object
+      properties:
+        product_id:
+          type: string
+          format: uuid
+        recommended_quantity:
+          type: number
+        supplier_id:
+          type: string
+          format: uuid
+        reason:
+          type: string
+    ProfitabilityReport:
+      type: object
+      properties:
+        restaurant_id:
+          type: string
+          format: uuid
+        revenue:
+          type: number
+        food_cost:
+          type: number
+        waste_cost:
+          type: number
+        gross_margin:
+          type: number
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        action:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+    ErrorEnvelope:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+            request_id:
+              type: string
+    PaginatedOrganizations:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/Organization'
+    PaginatedRestaurants:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/Restaurant'
+    PaginatedSuppliers:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/Supplier'
+    PaginatedProducts:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/Product'
+    PaginatedInventoryItems:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/InventoryItem'
+    PaginatedPurchaseOrders:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/PurchaseOrder'
+    PaginatedAuditLogs:
+      allOf:
+        - $ref: '#/components/schemas/PaginatedResponse'
+        - type: object
+          properties:
+            results:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditLog'
+    PaginatedResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        next:
+          type: string
+          nullable: true
+        previous:
+          type: string
+          nullable: true

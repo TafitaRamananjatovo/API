@@ -1,0 +1,195 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: smart-inventory
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-api
+  namespace: smart-inventory
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: django-api
+  template:
+    metadata:
+      labels:
+        app: django-api
+    spec:
+      containers:
+        - name: django-api
+          image: ghcr.io/example/smart-inventory/django-api:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: smart-inventory-secrets
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-ai
+  namespace: smart-inventory
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fastapi-ai
+  template:
+    metadata:
+      labels:
+        app: fastapi-ai
+    spec:
+      containers:
+        - name: fastapi-ai
+          image: ghcr.io/example/smart-inventory/fastapi-ai:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: smart-inventory-secrets
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-websocket
+  namespace: smart-inventory
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: go-websocket
+  template:
+    metadata:
+      labels:
+        app: go-websocket
+    spec:
+      containers:
+        - name: go-websocket
+          image: ghcr.io/example/smart-inventory/go-websocket:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: smart-inventory-secrets
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-worker
+  namespace: smart-inventory
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: celery-worker
+  template:
+    metadata:
+      labels:
+        app: celery-worker
+    spec:
+      containers:
+        - name: celery-worker
+          image: ghcr.io/example/smart-inventory/django-api:latest
+          command: ["celery", "-A", "config", "worker", "-l", "info"]
+          envFrom:
+            - secretRef:
+                name: smart-inventory-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-api
+  namespace: smart-inventory
+spec:
+  selector:
+    app: django-api
+  ports:
+    - port: 80
+      targetPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fastapi-ai
+  namespace: smart-inventory
+spec:
+  selector:
+    app: fastapi-ai
+  ports:
+    - port: 80
+      targetPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-websocket
+  namespace: smart-inventory
+spec:
+  selector:
+    app: go-websocket
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: django-api
+  namespace: smart-inventory
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: django-api
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 65
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: smart-inventory
+  namespace: smart-inventory
+spec:
+  rules:
+    - host: api.smart-inventory.example.com
+      http:
+        paths:
+          - path: /api/v1/forecasts
+            pathType: Prefix
+            backend:
+              service:
+                name: fastapi-ai
+                port:
+                  number: 80
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: go-websocket
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: django-api
+                port:
+                  number: 80

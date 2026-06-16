@@ -1,4 +1,4 @@
-package main
+package models
 
 // You can move this to a separate models package in a larger project
 
